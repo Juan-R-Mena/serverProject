@@ -10,16 +10,18 @@
 
 */
 
-#include <stdio.h>
-#include <ctype.h>
-#include <netdb.h>
-#include <sys/socket.h>
-#include <sys/select.h>
-#include <netinet/in.h>
 #include <stdlib.h>
-#include <string.h>
-#include <errno.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <netinet/in.h>
+#include <netdb.h>
 #include <arpa/inet.h>
+#include <ctype.h>
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
 
 // input: 1 command line argument specifying the port # of the server.
 int main(int argc, char** argv) {
@@ -30,6 +32,7 @@ int main(int argc, char** argv) {
 	int nfound, fd, maxfd, bytesread, addrlen;
 	fd_set rmask, mask;
 	static struct timeval timeout = { 0, 500000 }; // 0.5 second timeout for the select() syscall.
+	char buf[BUFSIZ];
 
 	// Improper # of input args; call error.
 	if (argc != 2) {
@@ -111,6 +114,28 @@ int main(int argc, char** argv) {
         		maxfd = new_sock;
         	}
     		FD_CLR(request_sock, &rmask);
+    	}
+    	for (fd=0; fd <= maxfd ; fd++) {
+    	/* look for other sockets that have data available */
+    	if (FD_ISSET(fd, &rmask)) {
+			/* process the data */
+			bytesread = read(fd, buf, sizeof buf - 1);
+			if (bytesread<0) {
+    			perror("read");
+    			/* fall through */
+			}
+			if (bytesread<=0) {
+    			printf("server: end of file on %d\n",fd);
+    			FD_CLR(fd, &mask);
+    			if (close(fd)) perror("close");
+    			continue;
+			}
+			buf[bytesread] = '\0';
+			printf("%s: %d bytes from %d: %s\n", argv[0], bytesread, fd, buf);
+			/* echo it back */
+			if (write(fd, buf, bytesread)!=bytesread)
+    			perror("echo");
+    		}
     	}
     }		
 }
