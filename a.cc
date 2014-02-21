@@ -10,6 +10,8 @@
 
 */
 
+#define _OE_SOCKETS
+#include <sys/types.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -40,7 +42,7 @@ int isValidGetRequest (std::string method, std::string path, std::string protoco
 	int get_right = method.compare("GET ") == 0;
 
 	// FIX REGEX.
-	std::regex e ("/(\\w|\\.)+(/(\\w|\\.)*)*|/");
+	std::regex e ("/(\\w|\\.)+(/(\\w|)*)*|/");
 	int path_right = std::regex_match (path, e);
 
 	int protocol_right = (protocol.compare("HTTP/1.0") == 0) || (protocol.compare("HTTP/1.1") == 0);
@@ -109,7 +111,7 @@ int main(int argc, char** argv) {
 	else {
 		// Return 400
 		printf("ERR 400");
-	}
+	}c
 	return 0;
 	*/
 
@@ -117,7 +119,7 @@ int main(int argc, char** argv) {
 	struct sockaddr_in server, remote; // main server address and sender address
 	int request_sock, new_sock; // the first is used to listen, whereas the new socket created by accept() is stored in the second.
 	int nfound, fd, maxfd, bytesread;
-	unsigned int * addrlen;
+	int addrlen;
 	fd_set rmask, mask;
 	static struct timeval timeout = { 0, 500000 }; // 0.5 second timeout for the select() syscall.
 	char buf[BUFSIZ];
@@ -189,12 +191,12 @@ int main(int argc, char** argv) {
 
     	// A connection is available.
     	if (FD_ISSET(request_sock, &rmask)) {
-			addrlen = (unsigned int *) sizeof(remote);
-    		new_sock = accept(request_sock, (struct sockaddr *)&remote, addrlen);
+			addrlen = sizeof(remote);
+     		new_sock = accept(request_sock, (struct sockaddr *)&remote, (socklen_t *) &addrlen);
   
     		// Something went wrong with accepting; report error and break.
     		if (new_sock < 0) {
-        		perror("Error in accepting connection.");
+        		perror("Error in accepting connection");
 				exit(1); 
 			}
     		printf("Connection from host %s, port %d, socket %d\n", inet_ntoa(remote.sin_addr), ntohs(remote.sin_port),new_sock);
